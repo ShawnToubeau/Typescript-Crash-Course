@@ -1,43 +1,62 @@
-interface UserProps {
+import { Eventing } from './Eventing';
+import { Sync } from './Sync';
+import { Attributes } from './Attributes';
+import { AxiosResponse } from 'axios';
+
+export interface UserProps {
+  id?: number;
   name?: string;
   age?: number;
-  id?: number;
 }
 
-type Callback = () => void;
+const rootUrl = 'http://localhost:3000';
 
 export class User {
-  events: { [key: string]: Callback[] } = {};
+  public events: Eventing = new Eventing();
+  public sync: Sync<UserProps> = new Sync<UserProps>(rootUrl);
+  public attributes: Attributes<UserProps>;
 
-  constructor(private data: UserProps) {}
+  constructor(attrs: UserProps) {
+    this.attributes = new Attributes<UserProps>(attrs);
+  }
 
-  get(propName: string): number | string {
-    return this.data[propName];
+  get on() {
+    return this.events.on;
+  }
+
+  get trigger() {
+    return this.events.trigger;
+  }
+
+  get get() {
+    return this.attributes.get;
   }
 
   set(update: UserProps): void {
-    Object.assign(this.data, update);
+    this.attributes.set(update);
+    this.events.trigger('change');
   }
 
-  on(eventName: string, callback: Callback): void {
-    const handlers = this.events[eventName] || [];
-    handlers.push(callback);
-    this.events[eventName] = handlers;
-  }
+  fetch(): void {
+    const id = this.get('id');
 
-  trigger(eventName: string): void {
-    const handlers = this.events[eventName];
-
-    if (!handlers || handlers.length === 0) {
-      return;
-    } else {
-      handlers.forEach(callback => {
-        callback();
-      });
+    if (typeof id !== 'number') {
+      throw new Error('Cannot fetch without an id');
     }
+
+    this.sync.fetch(id).then((res: AxiosResponse): void => {
+      this.set(res.data);
+    });
   }
 
-  fetch() {}
-
-  save(): void {}
+  save(): void {
+    this.sync
+      .save(this.attributes.getAll())
+      .then((res: AxiosResponse): void => {
+        this.trigger('save');
+      })
+      .catch(() => {
+        this.trigger('error');
+      });
+  }
 }
