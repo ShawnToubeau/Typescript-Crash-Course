@@ -8,7 +8,7 @@ export class ApiSync<T extends HasId> {
   constructor(public rootUrl: string) {}
 
   fetch(id: number): AxiosPromise {
-    const getUrl = `${this.rootUrl}/users/${id}`;
+    const getUrl = `${this.rootUrl}/${id}`;
     return axios.get(getUrl);
   }
 
@@ -16,10 +16,10 @@ export class ApiSync<T extends HasId> {
     const { id } = data;
 
     if (id) {
-      const putUrl = `${this.rootUrl}/users/${id}`;
+      const putUrl = `${this.rootUrl}/${id}`;
       return axios.put(putUrl, data);
     } else {
-      const postUrl = `${this.rootUrl}/users`;
+      const postUrl = `${this.rootUrl}`;
       return axios.post(postUrl, data);
     }
   }
